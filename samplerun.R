@@ -51,7 +51,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ## permutations actually affects estimates
     
     ## pack as sparsebnData
-    sData.null <- sparsebnData(dat1, type = "continuous")
+    suppressMessages(sData.null <- sparsebnData(dat1, type = "continuous"))
 
     ## CCDr
     ptm <- proc.time()
@@ -67,7 +67,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     metric[1, 8] <- (proc.time() - ptm)[3]
     # metric[1, 8:10] <- (proc.time() - ptm)[1:3]
 
-    ## CCDri
+    ## CCDrA
     ptm <- proc.time()
     ccdrA.path <- ccdrAlgorithm::ccdr.run(data = sData.null, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
@@ -124,7 +124,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     metric[4, 8] <- (proc.time() - ptm)[3]
     # metric[4, 8:10] <- (proc.time() - ptm)[1:3]
 
-    ## CCDri
+    ## CCDrA
     ptm <- proc.time()
     ccdrA.path <- ccdrAlgorithm::ccdr.run(data = sData.vfix, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
@@ -185,9 +185,12 @@ for(i in 701:750) m[[i]] <- ccdrtest(nn = 500, pp = 200, num.edges = 400, itvtim
 saveRDS(m, file = "ccdrtest.rds")
 
 # To average over one case:
-m1 <- cbind(m[[1]][, 1:6], Reduce('+', lapply(m[1:50], '[', , 7:15)) / 50)
-m2 <- cbind(m[[51]][, 1:6], Reduce('+', lapply(m[51:100], '[', , 7:15)) / 50)
-m3 <- cbind(m[[101]][, 1:6], Reduce('+', lapply(m[101:150], '[', , 7:15)) / 50)
+m1 <- cbind(m[[1]][, 1:6], Reduce('+', lapply(m[1:50], '[', , 7:15)) / 50); m1
+m2 <- cbind(m[[51]][, 1:6], Reduce('+', lapply(m[51:100], '[', , 7:15)) / 50); m2
+m3 <- cbind(m[[101]][, 1:6], Reduce('+', lapply(m[101:150], '[', , 7:15)) / 50); m3
+
+# nn = 100; pp = 50; num.edges = 100; itvtimes = 2; vfix = NULL; gamma = 2; lambdas.length = 20;
+# alpha = 10; verbose = FALSE; rlam = NULL; error.tol = 1e-4; max.iters = NULL; rlam = NULL
 
 # CCDri performs well when intervention times is the same for each node (?)
 
