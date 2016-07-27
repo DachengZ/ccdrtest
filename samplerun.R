@@ -1,16 +1,11 @@
-# include "ccdr" for comparing this code with old version
-# if(devtools::find_rtools()) devtools::install_github("itsrainingdata/ccdr")
-library(ccdr)
-
-library(sparsebnUtils)
+# library(sparsebnUtils)
 library(ccdrAlgorithm)
 setwd("~/ccdrtest") ## change if necessary
 
 library(bnlearn)
 library(graph)
-library(RBGL)
+# library(RBGL)
 library(pcalg)
-library(igraph)
 
 source("rmvDAG.R") ## generate random data with optional intervention
 source("sparsebnconvert.R") ## consider use functions from sparsebnUtils packages
@@ -29,7 +24,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ss <- num.edges / pp # the expected number of parents *per node*
 
     ## To record performance
-    metric <- matrix(0, 6, 8) ## to record performance metrics
+    metric <- matrix(0, 4, 8) ## to record performance metrics
 
     ### Generate a random DAG using the pcalg method randomDAG
     beta.min <- 0.5
@@ -49,15 +44,14 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     dat1 <- dat[, o] # permute the columns to randomize node ordering
     g1 <- permutenodes(g, o)
     ## permutations actually affects estimates
-    
-    ## pack as sparsebnData
-    suppressMessages(sData.null <- sparsebnData(dat1, type = "continuous"))
 
-    ## CCDr
+    ## pack as sparsebnData
+    suppressMessages(sData.null <- sparsebnUtils::sparsebnData(dat1, type = "continuous"))
+    ## CCDrA
     ptm <- proc.time()
-    ccdr.path <- ccdr::ccdr.run(data = dat1, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
-    # print(ccdr.path)
-    graph.path <- lapply(ccdr.path, ccdrFit2graph)
+    ccdrA.path <- ccdr.run(data = sData.null, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
+    # print(ccdri.path)
+    graph.path <- lapply(ccdrA.path, sparsebnFit2graph)
     compare.path <- sapply(graph.path, compare.graph, g1)
     shd.val <- compare.path[7, ]
     z <- which(shd.val == min(shd.val))
@@ -67,29 +61,15 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     metric[1, 8] <- (proc.time() - ptm)[3]
     # metric[1, 8:10] <- (proc.time() - ptm)[1:3]
 
-    ## CCDrA
-    ptm <- proc.time()
-    ccdrA.path <- ccdrAlgorithm::ccdr.run(data = sData.null, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
-    # print(ccdri.path)
-    graph.path <- lapply(ccdrA.path, sparsebnFit2graph)
-    compare.path <- sapply(graph.path, compare.graph, g1)
-    shd.val <- compare.path[7, ]
-    z <- which(shd.val == min(shd.val))
-    z <- z[length(z)]
-    # graph.shd <- permutenodes(graph.path[[z]], q)
-    metric[2, 1:7] <- compare.path[, z]
-    metric[2, 8] <- (proc.time() - ptm)[3]
-    # metric[2, 8:10] <- (proc.time() - ptm)[1:3]
-
     ## MMHC from `bnlearn`
     # PC from `pcalg` gives bi-directed DAG # Why?
     ptm <- proc.time()
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
     mmhc.graph <- as.graphNEL(mmhc.fit)
-    metric[3, 1:7] <- compare.graph(mmhc.graph, g1)
-    metric[3, 8] <- (proc.time() - ptm)[3]
-    # metric[3, 8:10] <- (proc.time() - ptm)[1:3]
+    metric[2, 1:7] <- compare.graph(mmhc.graph, g1)
+    metric[2, 8] <- (proc.time() - ptm)[3]
+    # metric[2, 8:10] <- (proc.time() - ptm)[1:3]
 
     true.edges <- metric[1, 2] - metric[1, 4] + metric[1, 7]
 
@@ -106,27 +86,13 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     vfix1 <- as.list(q1[vfix])
     g1 <- permutenodes(g, o)
     ## permutations actually affects estimates
-    
-    ## pack as sparsebnData
-    sData.vfix <- sparsebnData(dat1, type = "continuous", ivn = vfix1)
 
-    ## CCDr
-    ptm <- proc.time()
-    ccdr.path <- ccdr::ccdr.run(data = dat1, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
-    # print(ccdr.path)
-    graph.path <- lapply(ccdr.path, ccdrFit2graph)
-    compare.path <- sapply(graph.path, compare.graph, g1)
-    shd.val <- compare.path[7, ]
-    z <- which(shd.val == min(shd.val))
-    z <- z[length(z)]
-    # graph.shd <- permutenodes(graph.path[[z]], q)
-    metric[4, 1:7] <- compare.path[, z]
-    metric[4, 8] <- (proc.time() - ptm)[3]
-    # metric[4, 8:10] <- (proc.time() - ptm)[1:3]
+    ## pack as sparsebnData
+    sData.vfix <- sparsebnUtils::sparsebnData(dat1, type = "continuous", ivn = vfix1)
 
     ## CCDrA
     ptm <- proc.time()
-    ccdrA.path <- ccdrAlgorithm::ccdr.run(data = sData.vfix, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
+    ccdrA.path <- ccdr.run(data = sData.vfix, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
     graph.path <- lapply(ccdrA.path, sparsebnFit2graph)
     compare.path <- sapply(graph.path, compare.graph, g1)
@@ -134,9 +100,9 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     z <- which(shd.val == min(shd.val))
     z <- z[length(z)]
     # graph.shd <- permutenodes(graph.path[[z]], q)
-    metric[5, 1:7] <- compare.path[, z]
-    metric[5, 8] <- (proc.time() - ptm)[3]
-    # metric[5, 8:10] <- (proc.time() - ptm)[1:3]
+    metric[3, 1:7] <- compare.path[, z]
+    metric[3, 8] <- (proc.time() - ptm)[3]
+    # metric[3, 8:10] <- (proc.time() - ptm)[1:3]
 
     ## MMHC from `bnlearn`
     # PC from `pcalg` gives bi-directed DAG # Why?
@@ -144,17 +110,15 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
     mmhc.graph <- as.graphNEL(mmhc.fit)
-    metric[6, 1:7] <- compare.graph(mmhc.graph, g1)
-    metric[6, 8] <- (proc.time() - ptm)[3]
-    # metric[6, 8:10] <- (proc.time() - ptm)[1:3]
+    metric[4, 1:7] <- compare.graph(mmhc.graph, g1)
+    metric[4, 8] <- (proc.time() - ptm)[3]
+    # metric[4, 8:10] <- (proc.time() - ptm)[1:3]
 
-    namelist <- rep(c("CCDr", "CCDrA", "MMHC"), 2)
-    nnlist <- c(rep(nn, 3), rep(length(vfix), 3))
+    namelist <- rep(c("CCDrA", "MMHC"), 2)
+    nnlist <- c(rep(nn, 2), rep(length(vfix), 2))
     colnames(metric) <- c("P", "TP", "R", "FP", "TPR", "FDR", "SHD", "elapsed")
-    itvlist <- c(rep("obs", 3), rep("itv", 3))
-    itvtimes <- c(rep(NA, 3), rep(itvtimes, 3)) # use 0 instead of NA?
-    # pplist <- as.integer(rep(pp, 6))
-    # nelist <- as.integer(rep(num.edges, 6))
+    itvlist <- c(rep("obs", 2), rep("itv", 2))
+    itvtimes <- c(rep(NA, 2), rep(itvtimes, 2)) # use 0 instead of NA?
     return(data.frame(name = namelist, nn = nnlist, pp, num.edges,
                       itv = itvlist, itvtimes = itvtimes, true.edges,
                       metric))
@@ -185,15 +149,9 @@ for(i in 701:750) m[[i]] <- ccdrtest(nn = 500, pp = 200, num.edges = 400, itvtim
 saveRDS(m, file = "ccdrtest.rds")
 
 # To average over one case:
-m1 <- cbind(m[[1]][, 1:6], Reduce('+', lapply(m[1:50], '[', , 7:15)) / 50); m1
-m2 <- cbind(m[[51]][, 1:6], Reduce('+', lapply(m[51:100], '[', , 7:15)) / 50); m2
-m3 <- cbind(m[[101]][, 1:6], Reduce('+', lapply(m[101:150], '[', , 7:15)) / 50); m3
-
-# nn = 100; pp = 50; num.edges = 100; itvtimes = 2; vfix = NULL; gamma = 2; lambdas.length = 20;
-# alpha = 10; verbose = FALSE; rlam = NULL; error.tol = 1e-4; max.iters = NULL; rlam = NULL
-
-# CCDri performs well when intervention times is the same for each node (?)
-
+m7 <- cbind(m[[301]][, 1:6], Reduce('+', lapply(m[301:350], '[', , 7:15)) / 50); m7
+m8 <- cbind(m[[351]][, 1:6], Reduce('+', lapply(m[351:400], '[', , 7:15)) / 50); m8
+m9 <- cbind(m[[401]][, 1:6], Reduce('+', lapply(m[401:450], '[', , 7:15)) / 50); m9
 
 # getm <- function(row, column) {
 #     return(sapply(m, "[", row, column))
