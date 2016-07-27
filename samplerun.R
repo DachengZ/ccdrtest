@@ -1,15 +1,14 @@
-# library(sparsebnUtils)
 library(ccdrAlgorithm)
-setwd("~/ccdrtest") ## change if necessary
+setwd("~/ccdrtest") ## change this accordingly
 
 library(bnlearn)
 library(graph)
-# library(RBGL)
+## library(RBGL)
 library(pcalg)
 
-source("rmvDAG.R") ## generate random data with optional intervention
-source("sparsebnconvert.R") ## consider use functions from sparsebnUtils packages
-source("compare.R") ## compare graphs. different from `compareGraphs`
+source("ccdr-rmvDAG.R") ## generate random data with optional intervention
+source("ccdr-convert.R") ## consider use functions from sparsebnUtils packages
+source("ccdr-compare.R") ## compare graphs. different from `compareGraphs`
 
 ### Test function wrapper
 ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2, lambdas.length = 20) {
@@ -34,7 +33,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
 
     ### Observational data
     vfix0 <- as.integer(rep(pp + 1, nn))
-    dat <- rmvDAG.fix(n = nn, dag = g, vfix = vfix0)
+    dat <- rmvDAG.fix(dag = g, n = nn, vfix = vfix0)
 
     ## Permute columns
     o <- sample(1:pp)
@@ -42,7 +41,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     q <- order(o) ## o[q] == q[o] == 1:pp
     q1 <- order(o1)
     dat1 <- dat[, o] # permute the columns to randomize node ordering
-    g1 <- permutenodes(g, o)
+    g1 <- permutenodes.graph(g, o)
+    edL1 <- edgeL(g1)
     ## permutations actually affects estimates
 
     ## pack as sparsebnData
@@ -51,12 +51,10 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     ccdrA.path <- ccdr.run(data = sData.null, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
-    graph.path <- lapply(ccdrA.path, sparsebnFit2graph)
-    compare.path <- sapply(graph.path, compare.graph, g1)
+    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.sFg, edL1)
     shd.val <- compare.path[7, ]
     z <- which(shd.val == min(shd.val))
     z <- z[length(z)]
-    # graph.shd <- permutenodes(graph.path[[z]], q)
     metric[1, 1:7] <- compare.path[, z]
     metric[1, 8] <- (proc.time() - ptm)[3]
     # metric[1, 8:10] <- (proc.time() - ptm)[1:3]
@@ -81,10 +79,11 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     # it seems that, here itvtimes can be non-integer;
     # R will replace itvtimes by floor(itvtimes)
     nn1 <- length(vfix)
-    dat <- rmvDAG.fix(n = nn1, dag = g, vfix = vfix)
+    dat <- rmvDAG.fix(dag = g, n = nn1, vfix = vfix)
     dat1 <- dat[, o] # permute the columns to randomize node ordering
     vfix1 <- as.list(q1[vfix])
-    g1 <- permutenodes(g, o)
+    g1 <- permutenodes.graph(g, o)
+    edL1 <- edgeL(g1)
     ## permutations actually affects estimates
 
     ## pack as sparsebnData
@@ -94,12 +93,10 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     ccdrA.path <- ccdr.run(data = sData.vfix, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
-    graph.path <- lapply(ccdrA.path, sparsebnFit2graph)
-    compare.path <- sapply(graph.path, compare.graph, g1)
+    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.sFg, edL1)
     shd.val <- compare.path[7, ]
     z <- which(shd.val == min(shd.val))
     z <- z[length(z)]
-    # graph.shd <- permutenodes(graph.path[[z]], q)
     metric[3, 1:7] <- compare.path[, z]
     metric[3, 8] <- (proc.time() - ptm)[3]
     # metric[3, 8:10] <- (proc.time() - ptm)[1:3]
