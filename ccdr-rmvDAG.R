@@ -9,7 +9,7 @@ rmvDAG.fix <- function(dag, n, vfix = NULL, m = 0, s = 1) {
 
     ## check input &  initialize variables
     stopifnot(is(dag, "graph"),
-              (p <- length(nodes(dag))) >= 2)
+              (p <- length(dag@nodes)) >= 2)
 
     if(!is.null(vfix)) if(length(vfix) != n) stop("wrong length of vfix!")
 

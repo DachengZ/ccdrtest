@@ -2,12 +2,9 @@ library(ccdrAlgorithm)
 setwd("~/ccdrtest") ## change this accordingly
 
 library(bnlearn)
-library(graph)
-## library(RBGL)
 library(pcalg)
 
 source("ccdr-rmvDAG.R") ## generate random data with optional intervention
-source("ccdr-convert.R") ## consider use functions from sparsebnUtils packages
 source("ccdr-compare.R") ## compare graphs. different from `compareGraphs`
 
 ### Test function wrapper
@@ -30,7 +27,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     beta.max <- 1
     edge.pr <- 2 * ss / (pp - 1)
     g <- randomDAG(n = pp, prob = edge.pr, lB = beta.min, uB = beta.max) # Note that the edge weights are selected at random here!
-
+    edL <- sparsebnUtils::to_edgeList(g)
+    
     ### Observational data
     vfix0 <- as.integer(rep(pp + 1, nn))
     dat <- rmvDAG.fix(dag = g, n = nn, vfix = vfix0)
@@ -41,8 +39,6 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     q <- order(o) ## o[q] == q[o] == 1:pp
     q1 <- order(o1)
     dat1 <- dat[, o] # permute the columns to randomize node ordering
-    g1 <- permutenodes.graph(g, o)
-    edL1 <- edgeL(g1)
     ## permutations actually affects estimates
 
     ## pack as sparsebnData
@@ -51,7 +47,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     ccdrA.path <- ccdr.run(data = sData.null, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
-    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.sFg, edL1)
+    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.edgeList, edL, o)
     shd.val <- compare.path[7, ]
     z <- which(shd.val == min(shd.val))
     z <- z[length(z)]
@@ -64,8 +60,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
-    mmhc.graph <- as.graphNEL(mmhc.fit)
-    metric[2, 1:7] <- compare.graph(mmhc.graph, g1)
+    mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit)) ## to_edgeList.bn not working ## why?
+    metric[2, 1:7] <- compare.edgeList(mmhc.edL, edL, o)
     metric[2, 8] <- (proc.time() - ptm)[3]
     # metric[2, 8:10] <- (proc.time() - ptm)[1:3]
 
@@ -82,8 +78,6 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     dat <- rmvDAG.fix(dag = g, n = nn1, vfix = vfix)
     dat1 <- dat[, o] # permute the columns to randomize node ordering
     vfix1 <- as.list(q1[vfix])
-    g1 <- permutenodes.graph(g, o)
-    edL1 <- edgeL(g1)
     ## permutations actually affects estimates
 
     ## pack as sparsebnData
@@ -93,7 +87,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     ccdrA.path <- ccdr.run(data = sData.vfix, gamma = gamma, lambdas.length = lambdas.length, alpha = 10, verbose = FALSE)
     # print(ccdri.path)
-    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.sFg, edL1)
+    compare.path <- sapply(lapply(ccdrA.path, getElement, "edges"), compare.edgeList, edL, o)
     shd.val <- compare.path[7, ]
     z <- which(shd.val == min(shd.val))
     z <- z[length(z)]
@@ -106,8 +100,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
-    mmhc.graph <- as.graphNEL(mmhc.fit)
-    metric[4, 1:7] <- compare.graph(mmhc.graph, g1)
+    mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit))
+    metric[4, 1:7] <- compare.edgeList(mmhc.edL, edL, o)
     metric[4, 8] <- (proc.time() - ptm)[3]
     # metric[4, 8:10] <- (proc.time() - ptm)[1:3]
 
