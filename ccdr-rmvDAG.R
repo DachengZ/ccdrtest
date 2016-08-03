@@ -1,4 +1,4 @@
-rmvDAG.fix <- function(dag, n, vfix = NULL, m = 0, s = 1) {
+rmvDAG.fix <- function(dag, n, ivnlist = NULL, m = 0, s = 1) {
     ## function for generating random data based on DAG
     ## Currently only supports single-node intervention in each sample
     ## To do: to support ivnlist
@@ -11,7 +11,7 @@ rmvDAG.fix <- function(dag, n, vfix = NULL, m = 0, s = 1) {
     stopifnot(is(dag, "graph"),
               (p <- length(dag@nodes)) >= 2)
 
-    if(!is.null(vfix)) if(length(vfix) != n) stop("wrong length of vfix!")
+    if(!is.null(ivnlist)) if(length(ivnlist) != n) stop("wrong length of ivnlist!")
 
     ## as(.,"matrix") now {for some versions of 'graph' pkg} is 0/1
     ## weightMatrix <- t(as(dag,"matrix"))
@@ -27,15 +27,16 @@ rmvDAG.fix <- function(dag, n, vfix = NULL, m = 0, s = 1) {
 
     ## compute X matrix X_i
     errMat <- matrix(rnorm(n * p), nrow = n)
-    if(is.null(vfix)) vfix <- rep(p + 1, n) ## todo: change to 0?
+    colnames(errMat) <- 1:p
+    if(is.null(ivnlist)) ivnlist <- vector("list", n) ## todo: change to 0?
     if (sum(weightMatrix) > 0) {
         X <- errMat
         for(i in 1:n) {
-            v <- vfix[i]
-            if(v == 1) X[i, 1] <- X[i, 1] * s + m
+            v <- ivnlist[[i]]
+            if(1 %in% v) X[i, 1] <- X[i, 1] * s + m
             for(j in 2:p) { ## uses X[*, 1:(j-1)] -- "recursively" !
                 ## in case input vfix is not ordered
-                if(v == j) X[i, j] <- X[i, j] * s + m
+                if(j %in% v) X[i, j] <- X[i, j] * s + m
                 else {
                     ij <- 1:(j-1)
                     X[i, j] <- X[i, j] + X[i, ij] %*% weightMatrix[j, ij]
@@ -45,4 +46,4 @@ rmvDAG.fix <- function(dag, n, vfix = NULL, m = 0, s = 1) {
         return(X)
     }
     else return(errMat)
-} # END RMVDAG.FIX
+} # END rmvDAG.fix

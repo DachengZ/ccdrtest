@@ -30,8 +30,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     edL <- sparsebnUtils::to_edgeList(g)
     
     ### Observational data
-    vfix0 <- as.integer(rep(pp + 1, nn))
-    dat <- rmvDAG.fix(dag = g, n = nn, vfix = vfix0)
+    ## vfix0 <- as.integer(rep(pp + 1, nn))
+    dat <- rmvDAG.fix(dag = g, n = nn, ivnlist = NULL)
 
     ## Permute columns
     o <- sample(1:pp)
@@ -60,7 +60,8 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ptm <- proc.time()
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
-    mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit)) ## to_edgeList.bn not working ## why?
+    mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit))
+    # mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit)) ## to_edgeList.bn not working ## why?
     metric[2, 1:7] <- compare.edgeList(mmhc.edL, edL, o)
     metric[2, 8] <- (proc.time() - ptm)[3]
     # metric[2, 8:10] <- (proc.time() - ptm)[1:3]
@@ -70,14 +71,15 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     ### Intervention data
     if(is.null(vfix)) {
         if(is.null(itvtimes)) itvtimes <- floor(nn / pp)
-        vfix <- rep(sample(pp), itvtimes)
+        vfix <- rbind(rep(sample(pp), itvtimes), rep(sample(pp), itvtimes))
+        vfix <- lapply(seq_len(ncol(vfix)), function(i) vfix[,i])
     } else itvtimes <- paste("~", length(vfix) / pp, sep = "")
     # it seems that, here itvtimes can be non-integer;
     # R will replace itvtimes by floor(itvtimes)
     nn1 <- length(vfix)
-    dat <- rmvDAG.fix(dag = g, n = nn1, vfix = vfix)
+    dat <- rmvDAG.fix(dag = g, n = nn1, ivnlist = vfix)
     dat1 <- dat[, o] # permute the columns to randomize node ordering
-    vfix1 <- as.list(q1[vfix])
+    vfix1 <- lapply(vfix, function(x) q[unique(x)])
     ## permutations actually affects estimates
 
     ## pack as sparsebnData
@@ -101,6 +103,7 @@ ccdrtest <- function(nn, pp, num.edges, itvtimes = NULL, vfix = NULL, gamma = 2,
     # pc.fit <- pc(suffStat = list(C = cor(dat1), n = nn1), indepTest = gaussCItest, alpha = 0.01, p = pp, verbose = F)
     mmhc.fit <- mmhc(as.data.frame(dat1))
     mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit))
+    # mmhc.edL <- sparsebnUtils::to_edgeList(as.graphNEL(mmhc.fit))
     metric[4, 1:7] <- compare.edgeList(mmhc.edL, edL, o)
     metric[4, 8] <- (proc.time() - ptm)[3]
     # metric[4, 8:10] <- (proc.time() - ptm)[1:3]
